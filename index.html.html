@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia Interativo do Salário-Maternidade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Aconchego -->
+    <!-- Application Structure Plan: A SPA estruturada em torno de um "Simulador de Direitos" interativo para fornecer respostas personalizadas e imediatas. Esta abordagem é mais centrada no usuário do que a estrutura linear do relatório. O simulador guia os usuários (CLT, Autônoma, Desempregada) através de seus cenários específicos. Conceitos-chave como o "Período de Graça" são visualizados com um gráfico de linha do tempo dinâmico do Chart.js. Informações detalhadas estão disponíveis em seções recolhíveis para manter uma UI limpa, apoiada por um fluxograma visual para solução de problemas e um FAQ. Este design prioriza a conclusão de tarefas e a compreensão rápida em vez da leitura passiva. -->
+    <!-- Visualization & Content Choices: 1. Informação do Relatório: Regras do "Período de Graça" (12+12+12 meses). Objetivo: Ajudar as desempregadas a entender sua linha do tempo de cobertura. Visualização/Método: Gráfico de Barras Dinâmico (Linha do Tempo). Interação: A usuária responde a perguntas no simulador, e o gráfico é atualizado para mostrar seu período de cobertura específico de 12, 24 ou 36 meses. Justificativa: Uma linha do tempo visual é muito mais intuitiva do que ler um texto sobre adicionar meses. Fornece clareza instantânea e personalizada. Biblioteca: Chart.js (Canvas). 2. Informação do Relatório: Processo de "Pedido Negado". Objetivo: Orientar os usuários sobre o que fazer a seguir sem sobrecarregá-los. Visualização/Método: Fluxograma em HTML/CSS. Interação: Passar o mouse ou clicar em uma etapa pode mostrar um pequeno pop-up com mais detalhes. Justificativa: Um caminho visual é menos intimidador do que um bloco de texto, fazendo com que o processo pareça mais gerenciável. Biblioteca: Vanilla JS + Tailwind CSS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .accent-bg { background-color: #6D8B74; }
+        .accent-text { color: #6D8B74; }
+        .accent-border { border-color: #6D8B74; }
+        .light-bg { background-color: #FDF6F0; }
+        .main-bg { background-color: #F5EEDC; }
+        .dark-text { color: #3A4F41; }
+        .section-transition { transition: all 0.3s ease-in-out; }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 350px; }
+    </style>
+</head>
+<body class="main-bg dark-text">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+
+        <header class="text-center my-8 md:my-12">
+            <h1 class="text-4xl md:text-5xl font-bold dark-text">Guia Interativo do Salário-Maternidade</h1>
+            <p class="mt-4 text-lg text-gray-600">Seus direitos, de forma clara e personalizada. Descubra o que você precisa saber para vivenciar a maternidade com mais segurança.</p>
+        </header>
+
+        <main>
+            <section id="simulator" class="light-bg p-6 md:p-8 rounded-2xl shadow-lg">
+                <h2 class="text-2xl md:text-3xl font-bold text-center dark-text">Simulador de Direitos</h2>
+                <p class="text-center text-gray-600 mt-2 mb-8">Responda às perguntas para receber uma orientação personalizada para o seu caso.</p>
+
+                <div class="w-full max-w-md mx-auto">
+                    <div id="step1">
+                        <label class="font-semibold text-lg mb-4 block text-center">Qual é a sua situação profissional atual?</label>
+                        <div class="grid grid-cols-1 gap-4">
+                            <button onclick="showStep('clt')" class="w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-300 flex items-center">
+                                <span class="text-2xl mr-4">💼</span>
+                                <div>
+                                    <h3 class="font-bold">Trabalho com Carteira Assinada (CLT)</h3>
+                                    <p class="text-sm text-gray-500">Tenho registro formal de emprego.</p>
+                                </div>
+                            </button>
+                            <button onclick="showStep('autonoma')" class="w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-300 flex items-center">
+                                <span class="text-2xl mr-4">💡</span>
+                                <div>
+                                    <h3 class="font-bold">Sou Autônoma, MEI ou Facultativa</h3>
+                                    <p class="text-sm text-gray-500">Contribuo para o INSS por conta própria.</p>
+                                </div>
+                            </button>
+                            <button onclick="showStep('desempregada')" class="w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-300 flex items-center">
+                                <span class="text-2xl mr-4">⏳</span>
+                                <div>
+                                    <h3 class="font-bold">Estou Desempregada</h3>
+                                    <p class="text-sm text-gray-500">Parei de contribuir há algum tempo.</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="result-container" class="mt-8"></div>
+                </div>
+            </section>
+
+            <section id="details" class="my-12">
+                <h2 class="text-2xl md:text-3xl font-bold text-center dark-text mb-8">Conheça Seus Direitos em Detalhes</h2>
+                <div class="space-y-4 max-w-3xl mx-auto">
+                    <div class="accordion-item light-bg rounded-lg shadow">
+                        <button class="accordion-header w-full flex justify-between items-center p-5 text-left font-semibold text-lg">
+                            <span>Direitos Trabalhistas (CLT)</span>
+                            <span class="transform transition-transform duration-300">▼</span>
+                        </button>
+                        <div class="accordion-content px-5 pb-5">
+                            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                <li><strong>Estabilidade Provisória:</strong> Proteção contra demissão sem justa causa desde a confirmação da gravidez até 5 meses após o parto.</li>
+                                <li><strong>Licença-Maternidade:</strong> 120 dias de afastamento remunerado (ou 180 dias em empresas do programa Empresa Cidadã).</li>
+                                <li><strong>Dispensa para Consultas:</strong> Direito a se ausentar para, no mínimo, 6 consultas médicas e exames durante a gestação.</li>
+                                <li><strong>Pausas para Amamentação:</strong> Duas pausas de 30 minutos por dia para amamentar seu filho até os 6 meses de idade.</li>
+                            </ul>
+                        </div>
+                    </div>
+                     <div class="accordion-item light-bg rounded-lg shadow">
+                        <button class="accordion-header w-full flex justify-between items-center p-5 text-left font-semibold text-lg">
+                            <span>Requisitos do INSS (Qualidade de Segurada e Carência)</span>
+                            <span class="transform transition-transform duration-300">▼</span>
+                        </button>
+                        <div class="accordion-content px-5 pb-5 text-gray-700">
+                           <p class="mb-2"><strong>Qualidade de Segurada:</strong> É a condição de quem está protegida pelo INSS. Mesmo parando de contribuir, você mantém essa proteção por um tempo, o "Período de Graça", que pode ser de 12, 24 ou até 36 meses, dependendo do seu histórico.</p>
+                           <p><strong>Carência:</strong> É o tempo mínimo de contribuição. Graças a uma decisão do STF, contribuintes individuais e seguradas especiais não precisam mais cumprir carência de 10 meses. Para empregadas CLT, nunca houve exigência de carência.</p>
+                        </div>
+                    </div>
+                    <div class="accordion-item light-bg rounded-lg shadow">
+                        <button class="accordion-header w-full flex justify-between items-center p-5 text-left font-semibold text-lg">
+                            <span>Como Solicitar no Meu INSS</span>
+                            <span class="transform transition-transform duration-300">▼</span>
+                        </button>
+                        <div class="accordion-content px-5 pb-5 text-gray-700">
+                            <ol class="list-decimal list-inside space-y-2">
+                                <li>Acesse o site ou app "Meu INSS" com sua conta gov.br.</li>
+                                <li>Clique em "Novo Pedido" e busque por "Salário-Maternidade".</li>
+                                <li>Atualize seus dados de contato e preencha as informações solicitadas.</li>
+                                <li>Anexe os documentos necessários (identidade, CPF, certidão de nascimento).</li>
+                                <li>Escolha a agência e o banco para recebimento.</li>
+                                <li>Revise tudo e conclua o pedido. Anote o protocolo para acompanhar.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="denied-flow" class="my-12">
+                 <h2 class="text-2xl md:text-3xl font-bold text-center dark-text mb-8">Pedido Negado? Veja o Que Fazer</h2>
+                 <div class="relative max-w-3xl mx-auto p-4">
+                    <div class="absolute left-1/2 top-0 bottom-0 w-0.5 accent-bg opacity-50 hidden md:block"></div>
+                    <div class="space-y-8">
+                        <div class="flex flex-col md:flex-row items-center md:space-x-8">
+                            <div class="flex-shrink-0 w-16 h-16 rounded-full accent-bg text-white flex items-center justify-center text-2xl font-bold z-10">1</div>
+                            <div class="bg-white p-4 rounded-lg shadow-md mt-4 md:mt-0 md:flex-1">
+                                <h3 class="font-bold">Entenda o Motivo</h3>
+                                <p class="text-sm text-gray-600">O INSS informará o porquê da negativa na carta de comunicação. Geralmente é falta de algum documento.</p>
+                            </div>
+                        </div>
+                         <div class="flex flex-col md:flex-row-reverse items-center md:space-x-8 md:space-x-reverse">
+                            <div class="flex-shrink-0 w-16 h-16 rounded-full accent-bg text-white flex items-center justify-center text-2xl font-bold z-10">2</div>
+                            <div class="bg-white p-4 rounded-lg shadow-md mt-4 md:mt-0 md:flex-1">
+                                <h3 class="font-bold">Cumpra a Exigência</h3>
+                                <p class="text-sm text-gray-600">Se o INSS pedir um documento adicional, você terá 30 dias para enviá-lo pelo próprio app Meu INSS.</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col md:flex-row items-center md:space-x-8">
+                            <div class="flex-shrink-0 w-16 h-16 rounded-full accent-bg text-white flex items-center justify-center text-2xl font-bold z-10">3</div>
+                            <div class="bg-white p-4 rounded-lg shadow-md mt-4 md:mt-0 md:flex-1">
+                                <h3 class="font-bold">Entre com Recurso</h3>
+                                <p class="text-sm text-gray-600">Se não concordar com a decisão, você pode apresentar um recurso administrativo no INSS em até 30 dias.</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col md:flex-row-reverse items-center md:space-x-8 md:space-x-reverse">
+                            <div class="flex-shrink-0 w-16 h-16 rounded-full accent-bg text-white flex items-center justify-center text-2xl font-bold z-10">4</div>
+                            <div class="bg-white p-4 rounded-lg shadow-md mt-4 md:mt-0 md:flex-1">
+                                <h3 class="font-bold">Ação Judicial</h3>
+                                <p class="text-sm text-gray-600">Como último passo, caso o recurso não funcione, você pode buscar seus direitos na Justiça com um advogado.</p>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+            </section>
+
+        </main>
+
+        <footer class="text-center mt-12 py-6 border-t border-gray-300">
+            <p class="text-sm text-gray-500">Este guia tem caráter informativo e não substitui uma consulta jurídica. As regras previdenciárias podem sofrer alterações. Consulte sempre os canais oficiais do INSS.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        const resultContainer = document.getElementById('result-container');
+        let gracePeriodChart = null;
+
+        function showStep(profile) {
+            resultContainer.innerHTML = '';
+            let content = '';
+
+            switch (profile) {
+                case 'clt':
+                    content = `
+                        <div class="bg-white p-6 rounded-lg shadow-inner">
+                            <h3 class="font-bold text-xl mb-4 accent-text">Direitos da Trabalhadora CLT</h3>
+                            <p class="mb-4">Como trabalhadora com carteira assinada, você tem seus direitos garantidos de forma mais direta:</p>
+                            <ul class="list-disc list-inside space-y-2">
+                                <li><strong>Carência Zero:</strong> Você não precisa de um tempo mínimo de contribuição para ter direito.</li>
+                                <li><strong>Valor do Benefício:</strong> Será o mesmo que o seu salário integral.</li>
+                                <li><strong>Estabilidade:</strong> Garantia no emprego desde a confirmação da gravidez até 5 meses após o parto.</li>
+                                <li><strong>Duração:</strong> 120 dias de licença.</li>
+                            </ul>
+                            <button onclick="resetSimulator()" class="mt-6 w-full p-2 accent-bg text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">Voltar</button>
+                        </div>
+                    `;
+                    break;
+                case 'autonoma':
+                    content = `
+                        <div class="bg-white p-6 rounded-lg shadow-inner">
+                            <h3 class="font-bold text-xl mb-4 accent-text">Direitos da Autônoma, MEI ou Facultativa</h3>
+                            <p class="mb-4">A notícia é excelente para você! Uma decisão recente do STF removeu a exigência de 10 meses de carência. Agora, o mais importante é ter a <strong>qualidade de segurada</strong>, ou seja, estar com suas contribuições em dia.</p>
+                            <p class="mb-4">O valor do seu benefício será calculado com base na média dos seus 12 últimos salários de contribuição.</p>
+                            <button onclick="resetSimulator()" class="mt-6 w-full p-2 accent-bg text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">Voltar</button>
+                        </div>
+                    `;
+                    break;
+                case 'desempregada':
+                    content = `
+                        <div class="bg-white p-6 rounded-lg shadow-inner">
+                            <h3 class="font-bold text-xl mb-4 accent-text">Direitos da Desempregada</h3>
+                            <p class="mb-4">Mesmo desempregada, você pode ter direito! Tudo depende do <strong>"Período de Graça"</strong>, um tempo em que você mantém a qualidade de segurada mesmo sem contribuir. Responda abaixo para simular:</p>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="last-contribution" class="block text-sm font-medium text-gray-700">Quando foi sua última contribuição?</label>
+                                    <input type="month" id="last-contribution" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="flex h-5 items-center">
+                                        <input id="over-120" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <label for="over-120" class="font-medium text-gray-700">Já contribuí por mais de 10 anos (120 contribuições)?</label>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="flex h-5 items-center">
+                                        <input id="unemployment-benefit" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <label for="unemployment-benefit" class="font-medium text-gray-700">Recebi seguro-desemprego após parar de contribuir?</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="calculateGracePeriod()" class="mt-6 w-full p-2 accent-bg text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">Calcular Período de Graça</button>
+                            <div id="grace-period-result" class="mt-6"></div>
+                            <button onclick="resetSimulator()" class="mt-6 w-full p-2 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:opacity-90 transition-opacity">Voltar</button>
+                        </div>
+                    `;
+                    break;
+            }
+            resultContainer.innerHTML = content;
+            document.getElementById('step1').style.display = 'none';
+        }
+
+        function resetSimulator() {
+            resultContainer.innerHTML = '';
+            document.getElementById('step1').style.display = 'block';
+            if (gracePeriodChart) {
+                gracePeriodChart.destroy();
+                gracePeriodChart = null;
+            }
+        }
+
+        function calculateGracePeriod() {
+            const lastContributionInput = document.getElementById('last-contribution');
+            const over120 = document.getElementById('over-120').checked;
+            const unemploymentBenefit = document.getElementById('unemployment-benefit').checked;
+            const resultDiv = document.getElementById('grace-period-result');
+
+            if (!lastContributionInput.value) {
+                resultDiv.innerHTML = '<p class="text-red-600 font-semibold">Por favor, informe a data da sua última contribuição.</p>';
+                return;
+            }
+
+            let graceMonths = 12;
+            if (over120) graceMonths += 12;
+            if (unemploymentBenefit) graceMonths += 12;
+
+            const lastContributionDate = new Date(lastContributionInput.value + '-01T12:00:00Z');
+            const endDate = new Date(lastContributionDate);
+            endDate.setMonth(endDate.getMonth() + graceMonths);
+
+            const today = new Date();
+            const hasQuality = today <= endDate;
+
+            let resultHTML = `
+                <div class="p-4 rounded-lg ${hasQuality ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400'} border">
+                    <p class="font-bold text-lg ${hasQuality ? 'text-green-800' : 'text-red-800'}">Seu Período de Graça é de ${graceMonths} meses.</p>
+                    <p class="mt-2 ${hasQuality ? 'text-green-700' : 'text-red-700'}">Sua qualidade de segurada vai até <strong>${endDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</strong>.</p>
+                    <p class="mt-2 font-semibold ${hasQuality ? 'text-green-800' : 'text-red-800'}">${hasQuality ? '🎉 Você provavelmente ainda tem direito ao benefício!' : '😕 Seu período de graça provavelmente já terminou.'}</p>
+                </div>
+                <div class="chart-container mt-4"><canvas id="gracePeriodChartCanvas"></canvas></div>
+            `;
+            resultDiv.innerHTML = resultHTML;
+
+            renderGracePeriodChart(graceMonths, lastContributionDate);
+        }
+
+        function renderGracePeriodChart(totalMonths, startDate) {
+            if (gracePeriodChart) {
+                gracePeriodChart.destroy();
+            }
+            const ctx = document.getElementById('gracePeriodChartCanvas').getContext('2d');
+            const labels = [];
+            const data = [];
+            const backgroundColors = [];
+
+            const baseColor = 'rgba(109, 139, 116, 0.6)';
+            const extension1Color = 'rgba(109, 139, 116, 0.8)';
+            const extension2Color = 'rgba(109, 139, 116, 1)';
+            
+            let currentDate = new Date(startDate);
+
+            for (let i = 1; i <= totalMonths; i++) {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                labels.push(currentDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }));
+                data.push(1);
+                if (i <= 12) {
+                    backgroundColors.push(baseColor);
+                } else if (i <= 24) {
+                    backgroundColors.push(extension1Color);
+                } else {
+                    backgroundColors.push(extension2Color);
+                }
+            }
+
+            gracePeriodChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Meses de Cobertura',
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderColor: 'rgba(58, 79, 65, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: function() { return ''; },
+                                label: function(context) {
+                                    return `Cobertura até: ${context.label}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { display: false },
+                        x: {
+                            ticks: {
+                                autoSkip: true,
+                                maxTicksLimit: 12,
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const accordions = document.querySelectorAll('.accordion-header');
+            accordions.forEach(accordion => {
+                accordion.addEventListener('click', () => {
+                    const content = accordion.nextElementSibling;
+                    const icon = accordion.querySelector('span:last-child');
+                    
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
